@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using NAudio.Wave;
@@ -12,6 +13,7 @@ namespace VisualMusicBlockLooper
 
         private string[] pattern;
         private LoopPlayer player;
+        private SoundPreview soundPreview;
         private int playingStep = -1;
 
         private void AddPlaybackControls()
@@ -33,6 +35,7 @@ namespace VisualMusicBlockLooper
             if (pattern == null || grid == null)
                 return;
 
+            StopSoundPreview();
             var selected = pattern;
             var layout = grid.Layout;
             int bpm = scene.Bpm;
@@ -95,6 +98,7 @@ namespace VisualMusicBlockLooper
 
         private void StopPlayback()
         {
+            StopSoundPreview();
             if (player == null)
                 return;
 
@@ -105,6 +109,49 @@ namespace VisualMusicBlockLooper
             previewClock.Interval = PreviewInterval;
             picture.Invalidate();
             UpdateButtons();
+        }
+
+        private void PreviewSound(string name)
+        {
+            if (name == null)
+                return;
+
+            try
+            {
+                var path = library?.Resolve(name);
+                if (path == null)
+                    throw new FileNotFoundException("WAV non disponibile.");
+
+                soundPreview = new SoundPreview(path);
+                soundPreview.Stopped += OnSoundPreviewStopped;
+                soundPreview.Play();
+            }
+            catch (Exception error)
+            {
+                StopSoundPreview();
+                status.Text = "Anteprima " + name + " · " + error.Message;
+            }
+        }
+
+        private void OnSoundPreviewStopped(object sender, StoppedEventArgs args)
+        {
+            if (!ReferenceEquals(sender, soundPreview))
+                return;
+
+            StopSoundPreview();
+            if (args.Exception != null)
+                status.Text = "Anteprima WAV · " + args.Exception.Message;
+        }
+
+        private void StopSoundPreview()
+        {
+            var preview = soundPreview;
+            if (preview == null)
+                return;
+
+            soundPreview = null;
+            preview.Stopped -= OnSoundPreviewStopped;
+            preview.Dispose();
         }
 
         private void UpdatePlaybackButton()

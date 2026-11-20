@@ -243,9 +243,11 @@ namespace VisualMusicBlockLooper
             choices.SelectedIndexChanged += (sender, args) =>
             {
                 StopPlayback();
-                scene.Assign(modelId, label, ((SoundChoice)choices.SelectedItem).Name);
+                var sound = ((SoundChoice)choices.SelectedItem).Name;
+                scene.Assign(modelId, label, sound);
                 PublishResults();
                 SaveScene();
+                PreviewSound(sound);
             };
             pane.Controls.AddRange(new Control[] { name, choices });
             mappings.Controls.Add(pane);

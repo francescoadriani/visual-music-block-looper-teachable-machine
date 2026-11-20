@@ -49,15 +49,7 @@ namespace VisualMusicBlockLooper.Audio
         {
             using (var wave = new WaveFileReader(path))
             {
-                ISampleProvider source = wave.ToSampleProvider();
-                if (source.WaveFormat.Channels == 1)
-                    source = new MonoToStereoSampleProvider(source);
-                else if (source.WaveFormat.Channels != LoopMixer.Channels)
-                    throw new InvalidDataException("Il WAV deve essere mono o stereo: " + Path.GetFileName(path));
-
-                if (source.WaveFormat.SampleRate != LoopMixer.SampleRate)
-                    source = new WdlResamplingSampleProvider(source, LoopMixer.SampleRate);
-
+                var source = ToMixerFormat(wave);
                 var output = new List<float>();
                 var buffer = new float[8192];
                 int read;
@@ -74,6 +66,18 @@ namespace VisualMusicBlockLooper.Audio
 
                 return output.ToArray();
             }
+        }
+
+        public static ISampleProvider ToMixerFormat(WaveFileReader wave)
+        {
+            ISampleProvider source = wave.ToSampleProvider();
+            if (source.WaveFormat.Channels == 1)
+                source = new MonoToStereoSampleProvider(source);
+            else if (source.WaveFormat.Channels != LoopMixer.Channels)
+                throw new InvalidDataException("Il WAV deve essere mono o stereo.");
+
+            return source.WaveFormat.SampleRate == LoopMixer.SampleRate
+                ? source : new WdlResamplingSampleProvider(source, LoopMixer.SampleRate);
         }
     }
 }

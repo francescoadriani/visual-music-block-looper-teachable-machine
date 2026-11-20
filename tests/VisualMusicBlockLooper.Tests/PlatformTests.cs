@@ -2,12 +2,15 @@ using System;
 using System.Reflection;
 using System.Runtime.Versioning;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using AForge.Video.DirectShow;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.Web.WebView2.Core;
 using NAudio.Wave;
 using OpenCvSharp;
+using VisualMusicBlockLooper.Audio;
 
 namespace VisualMusicBlockLooper.Tests
 {
@@ -47,6 +50,38 @@ namespace VisualMusicBlockLooper.Tests
                 Assert.IsTrue(output.GetPosition() > 0);
                 output.Stop();
                 Assert.AreEqual(PlaybackState.Stopped, output.PlaybackState);
+            }
+        }
+
+        [TestMethod]
+        [TestCategory("Hardware")]
+        public async Task SoundPreviewPlaysOnceAndReleasesTheWaveFile()
+        {
+            var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".wav");
+            try
+            {
+                using (var wave = new WaveFileWriter(path, new WaveFormat(22050, 16, 1)))
+                {
+                    var silence = new byte[4410];
+                    wave.Write(silence, 0, silence.Length);
+                }
+
+                using (var preview = new SoundPreview(path))
+                {
+                    var ended = new TaskCompletionSource<StoppedEventArgs>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    preview.Stopped += (sender, args) => ended.TrySetResult(args);
+                    preview.Play();
+                    Assert.AreSame(ended.Task, await Task.WhenAny(ended.Task, Task.Delay(TimeSpan.FromSeconds(3))));
+                    Assert.IsNull((await ended.Task).Exception);
+                }
+
+                using (File.Open(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+                {
+                }
+            }
+            finally
+            {
+                File.Delete(path);
             }
         }
     }

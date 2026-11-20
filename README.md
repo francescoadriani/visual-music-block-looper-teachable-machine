@@ -19,7 +19,7 @@ Serve un PC Windows x64 con una versione di .NET Framework compatibile con il ta
 
 1. Scegli uno dei due fogli e stampalo in A4 orizzontale a dimensione effettiva (100%). Disegna un solo simbolo per casella, dentro il bordo. Lascia in bianco le pause.
 2. Seleziona la webcam. Premi **Importa modello** e scegli lo ZIP scaricato da Teachable Machine con **Image Project → Export Model → TensorFlow.js → Download**. Puoi iniziare con il [modello incluso](assets/modelli%20teachable%20machine/tm-my-image-model.zip), che riconosce cerchio, quadrato, croce e triangolo.
-3. Per ogni etichetta scegli un WAV oppure **Nessun suono**. Sono inclusi otto campioni acustici ed elettronici. Per usare i tuoi file scegli **Cartella WAV**. Usa campioni WAV mono o stereo.
+3. Per ogni etichetta scegli un WAV oppure **Nessun suono**. Il campione selezionato si sente subito. Sono inclusi otto campioni acustici ed elettronici. Per usare i tuoi file scegli **Cartella WAV**. Usa campioni WAV mono o stereo.
 4. Inquadra un solo foglio e tutti e quattro i suoi marcatori, in buona luce, poi premi **Acquisisci**. L'app indica il formato rilevato e sovrappone alla foto i bordi riconosciuti e i nomi dei campioni. Premi **Torna alla webcam** per rivedere l'anteprima.
 5. Premi **Start**. La colonna corrente si illumina nel blocco che sta suonando. **Stop** interrompe il loop.
 
