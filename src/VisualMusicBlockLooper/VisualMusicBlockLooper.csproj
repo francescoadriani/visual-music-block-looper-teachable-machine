@@ -24,5 +24,9 @@
     <None Update="Inference/**/*" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../assets/suoni/*" Link="assets/suoni/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../assets/foglio-loop-a4.svg" Link="assets/foglio-loop-a4.svg" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../assets/foglio-loop-a4.pdf" Link="assets/foglio-loop-a4.pdf" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../assets/modelli teachable machine/tm-my-image-model.zip"
+          Link="assets/modelli teachable machine/tm-my-image-model.zip" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../README.md" Link="README.md" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
