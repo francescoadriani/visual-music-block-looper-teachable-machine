@@ -1,6 +1,8 @@
 using System;
 using System.Reflection;
 using System.Runtime.Versioning;
+using System.Diagnostics;
+using System.Threading;
 using AForge.Video.DirectShow;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.Web.WebView2.Core;
@@ -38,6 +40,13 @@ namespace VisualMusicBlockLooper.Tests
             {
                 output.Init(new SilenceProvider(new WaveFormat(44100, 16, 2)));
                 Assert.AreEqual(44100, output.OutputWaveFormat.SampleRate);
+                output.Play();
+                var clock = Stopwatch.StartNew();
+                while (output.GetPosition() == 0 && clock.Elapsed < TimeSpan.FromSeconds(3))
+                    Thread.Sleep(30);
+                Assert.IsTrue(output.GetPosition() > 0);
+                output.Stop();
+                Assert.AreEqual(PlaybackState.Stopped, output.PlaybackState);
             }
         }
     }

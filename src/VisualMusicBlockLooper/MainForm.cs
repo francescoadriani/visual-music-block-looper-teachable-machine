@@ -68,6 +68,7 @@ namespace VisualMusicBlockLooper
             };
             AddTool(toolbar, "Webcam", cameras);
             AddSceneControls();
+            AddPlaybackControls();
             status.Margin = new Padding(14, 16, 4, 6);
             var footer = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, WrapContents = true };
             footer.Controls.AddRange(new Control[] { capture, resume, status });
@@ -83,7 +84,11 @@ namespace VisualMusicBlockLooper
             capture.Click += async (s, e) => await CaptureAsync();
             resume.Click += (s, e) => ReturnToWebcam();
             picture.Paint += DrawOverlay;
-            previewClock.Tick += (s, e) => ShowPreview();
+            previewClock.Tick += (s, e) =>
+            {
+                ShowPreview();
+                UpdatePlaybackPosition();
+            };
             UpdateButtons();
         }
 
@@ -191,9 +196,11 @@ namespace VisualMusicBlockLooper
 
         private void ReturnToWebcam()
         {
+            StopPlayback();
             frozen = false;
             cells = null;
             scores = null;
+            pattern = null;
             SetImage(null);
             status.Text = "In attesa della webcam…";
             UpdateButtons();
@@ -206,9 +213,11 @@ namespace VisualMusicBlockLooper
                 if (frame == null)
                     return;
 
+                StopPlayback();
                 frozen = true;
                 cells = null;
                 scores = null;
+                pattern = null;
                 SetImage((Bitmap)frame.Clone());
                 SetBusy(true);
                 status.Text = "Lettura della griglia…";
@@ -252,6 +261,7 @@ namespace VisualMusicBlockLooper
             mappings.Enabled = !busy;
             tempo.Enabled = !busy;
             threshold.Enabled = !busy;
+            UpdatePlaybackButton();
         }
 
         private void DrawOverlay(object sender, PaintEventArgs e)
@@ -264,18 +274,22 @@ namespace VisualMusicBlockLooper
             float top = (picture.Height - picture.Image.Height * scale) / 2;
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             using (var pen = new Pen(Accent, 2))
+            using (var beat = new SolidBrush(Color.FromArgb(66, Accent)))
             {
                 for (int index = 0; index < cells.Length; index++)
                 {
                     var cell = cells[index];
+                    var polygon = Array.ConvertAll(cell.Outline, point =>
+                        new PointF(left + point.X * scale, top + point.Y * scale));
+                    if (cell.Column == playingColumn)
+                        e.Graphics.FillPolygon(beat, polygon);
+
                     if (cell.Png == null)
                         continue;
 
                     var label = RecognizedLabel(index);
                     if (scores != null && label == null)
                         continue;
-                    var polygon = Array.ConvertAll(cell.Outline, point =>
-                        new PointF(left + point.X * scale, top + point.Y * scale));
                     e.Graphics.DrawPolygon(pen, polygon);
                     if (label == null)
                         continue;
@@ -316,6 +330,7 @@ namespace VisualMusicBlockLooper
             }
 
             previewClock.Dispose();
+            StopPlayback();
             classifier.Dispose();
             webcam?.Dispose();
             SetImage(null);

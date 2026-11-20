@@ -62,6 +62,7 @@ namespace VisualMusicBlockLooper
             {
                 if (restoring || scene == null)
                     return;
+                StopPlayback();
                 scene.Bpm = (int)tempo.Value;
                 SaveScene();
             };
@@ -69,6 +70,7 @@ namespace VisualMusicBlockLooper
             {
                 if (restoring || scene == null)
                     return;
+                StopPlayback();
                 scene.ThresholdPercent = (int)threshold.Value;
                 PublishResults();
                 SaveScene();
@@ -93,6 +95,7 @@ namespace VisualMusicBlockLooper
 
         private async Task ImportAsync(string path, bool persist)
         {
+            StopPlayback();
             SetBusy(true);
             status.Text = "Caricamento del modello…";
             bool accepted = false;
@@ -105,6 +108,7 @@ namespace VisualMusicBlockLooper
                 accepted = true;
                 scene.ModelPath = path;
                 scores = null;
+                pattern = null;
                 modelInfo.Text = Path.GetFileNameWithoutExtension(path);
                 BuildMappings();
                 await RecognizeAsync();
@@ -154,19 +158,23 @@ namespace VisualMusicBlockLooper
 
             int recognized = 0;
             int playable = 0;
+            var routes = new string[scores.Length];
             for (int index = 0; index < scores.Length; index++)
             {
                 var label = RecognizedLabel(index);
                 if (label == null)
                     continue;
                 ++recognized;
-                if (library?.Resolve(scene.SoundFor(classifier.Active.Id, label)) != null)
+                routes[index] = library?.Resolve(scene.SoundFor(classifier.Active.Id, label));
+                if (routes[index] != null)
                     ++playable;
             }
 
+            pattern = playable == 0 ? null : routes;
             status.Text = recognized == 0 ? "Nessun simbolo riconosciuto sopra soglia." :
                 "Simboli riconosciuti: " + recognized + " · Caselle con suono: " + playable;
             picture.Invalidate();
+            UpdateButtons();
         }
 
         private void BuildMappings()
@@ -227,6 +235,7 @@ namespace VisualMusicBlockLooper
             choices.Enabled = !empty;
             choices.SelectedIndexChanged += (sender, args) =>
             {
+                StopPlayback();
                 scene.Assign(modelId, label, ((SoundChoice)choices.SelectedItem).Name);
                 PublishResults();
                 SaveScene();
@@ -244,6 +253,7 @@ namespace VisualMusicBlockLooper
 
                 try
                 {
+                    StopPlayback();
                     library = SoundLibrary.Load(dialog.SelectedPath);
                     scene.SoundsDirectory = dialog.SelectedPath;
                     BuildMappings();
