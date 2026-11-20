@@ -12,7 +12,7 @@ namespace VisualMusicBlockLooper
 
         private string[] pattern;
         private LoopPlayer player;
-        private int playingColumn = -1;
+        private int playingStep = -1;
 
         private void AddPlaybackControls()
         {
@@ -30,10 +30,11 @@ namespace VisualMusicBlockLooper
             }
 
             PublishResults();
-            if (pattern == null)
+            if (pattern == null || grid == null)
                 return;
 
             var selected = pattern;
+            var layout = grid.Layout;
             int bpm = scene.Bpm;
             string message = status.Text;
             SetBusy(true);
@@ -42,13 +43,14 @@ namespace VisualMusicBlockLooper
             {
                 var prepared = await Task.Run(() =>
                 {
-                    var mixer = SoundSamples.CreateMixer(selected, bpm, out var unavailable);
+                    var mixer = SoundSamples.CreateMixer(layout, selected, bpm, out var unavailable);
                     return (Mixer: mixer, Unavailable: unavailable);
                 });
                 player = new LoopPlayer(prepared.Mixer);
                 player.Stopped += OnPlaybackStopped;
                 player.Play();
-                playingColumn = 0;
+                previewClock.Interval = layout.StepsPerBeat > 1 ? 25 : PreviewInterval;
+                playingStep = 0;
                 status.Text = prepared.Unavailable.Length == 0 ? message :
                     message + " · WAV saltati: " + string.Join(", ", prepared.Unavailable);
                 picture.Invalidate();
@@ -71,10 +73,10 @@ namespace VisualMusicBlockLooper
 
             try
             {
-                var column = player.Column;
-                if (column != playingColumn)
+                var step = player.Step;
+                if (step != playingStep)
                 {
-                    playingColumn = column;
+                    playingStep = step;
                     picture.Invalidate();
                 }
             }
@@ -99,7 +101,8 @@ namespace VisualMusicBlockLooper
             player.Stopped -= OnPlaybackStopped;
             player.Dispose();
             player = null;
-            playingColumn = -1;
+            playingStep = -1;
+            previewClock.Interval = PreviewInterval;
             picture.Invalidate();
             UpdateButtons();
         }

@@ -12,7 +12,13 @@ namespace VisualMusicBlockLooper
         {
             if (args.Length == 2 && args[0] == "--export-grid")
             {
-                File.WriteAllText(args[1], GridLayout.CreateSvg());
+                File.WriteAllText(args[1], GridLayout.Original.CreateSvg());
+                return;
+            }
+
+            if (args.Length == 2 && args[0] == "--export-grid-32")
+            {
+                File.WriteAllText(args[1], GridLayout.Detailed.CreateSvg());
                 return;
             }
 

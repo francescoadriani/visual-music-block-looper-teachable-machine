@@ -10,27 +10,36 @@ namespace VisualMusicBlockLooper.Vision
 {
     internal sealed class GridCell
     {
-        public int Row { get; }
-        public int Column { get; }
+        public int Step { get; }
         public Point2f[] Outline { get; }
         public byte[] Png { get; }
 
-        public GridCell(int row, int column, Point2f[] outline, byte[] png)
+        public GridCell(int step, Point2f[] outline, byte[] png)
         {
-            Row = row;
-            Column = column;
+            Step = step;
             Outline = outline;
             Png = png;
+        }
+    }
+
+    internal sealed class GridCapture
+    {
+        public GridLayout Layout { get; }
+        public GridCell[] Cells { get; }
+
+        public GridCapture(GridLayout layout, GridCell[] cells)
+        {
+            Layout = layout;
+            Cells = cells;
         }
     }
 
     internal static class GridReader
     {
         private const int PixelsPerMillimeter = 5;
-        private const int CropInset = 2;
-        private const string InvalidGrid = "Inquadra il foglio intero con tutti e quattro i marcatori e acquisisci di nuovo.";
+        private const string InvalidGrid = "Inquadra un solo foglio con tutti e quattro i marcatori e acquisisci di nuovo.";
 
-        public static GridCell[] Read(System.Drawing.Bitmap photo)
+        public static GridCapture Read(System.Drawing.Bitmap photo)
         {
             using (var png = new MemoryStream())
             {
@@ -40,7 +49,7 @@ namespace VisualMusicBlockLooper.Vision
             }
         }
 
-        public static GridCell[] Read(Mat frame)
+        public static GridCapture Read(Mat frame)
         {
             using (var dictionary = CvAruco.GetPredefinedDictionary(GridLayout.Dictionary))
             {
@@ -49,17 +58,18 @@ namespace VisualMusicBlockLooper.Vision
                     CornerRefinementMethod = CornerRefineMethod.Subpix
                 };
                 CvAruco.DetectMarkers(frame, dictionary, out var markers, out var ids, detector, out _);
+                var layout = GridLayout.FromMarkers(ids);
+                if (layout == null)
+                    throw new InvalidOperationException(InvalidGrid);
+
                 var observed = new List<Point2d>(GridLayout.MarkerCount * 4);
                 var expected = new List<Point2d>(GridLayout.MarkerCount * 4);
 
-                for (int id = 0; id < GridLayout.MarkerCount; id++)
+                for (int index = 0; index < GridLayout.MarkerCount; index++)
                 {
-                    var matches = Enumerable.Range(0, ids.Length).Where(index => ids[index] == id).ToArray();
-                    if (matches.Length != 1)
-                        throw new InvalidOperationException(InvalidGrid);
-
-                    observed.AddRange(markers[matches[0]].Select(point => new Point2d(point.X, point.Y)));
-                    expected.AddRange(GridLayout.MarkerCorners(id).Select(point =>
+                    int match = Array.IndexOf(ids, layout.MarkerId(index));
+                    observed.AddRange(markers[match].Select(point => new Point2d(point.X, point.Y)));
+                    expected.AddRange(GridLayout.MarkerCorners(index).Select(point =>
                         new Point2d(point.X * PixelsPerMillimeter, point.Y * PixelsPerMillimeter)));
                 }
 
@@ -76,34 +86,35 @@ namespace VisualMusicBlockLooper.Vision
 
                     Cv2.WarpPerspective(frame, page, toPage,
                         new Size(GridLayout.Width * PixelsPerMillimeter, GridLayout.Height * PixelsPerMillimeter));
-                    return ReadCells(page, toPhoto, frame.Size());
+                    return new GridCapture(layout, ReadCells(layout, page, toPhoto, frame.Size()));
                 }
             }
         }
 
-        private static GridCell[] ReadCells(Mat page, Mat toPhoto, Size photoSize)
+        private static GridCell[] ReadCells(GridLayout layout, Mat page, Mat toPhoto, Size photoSize)
         {
-            var cells = new GridCell[GridLayout.Rows * GridLayout.Columns];
-            for (int row = 0; row < GridLayout.Rows; row++)
-            for (int column = 0; column < GridLayout.Columns; column++)
+            var cells = new GridCell[layout.Rows * layout.Columns];
+            int inset = layout.CropInsetPixels;
+            for (int row = 0; row < layout.Rows; row++)
+            for (int column = 0; column < layout.Columns; column++)
             {
-                var cell = GridLayout.Cell(row, column);
+                var cell = layout.Cell(row, column);
                 var outline = GridLayout.Corners(cell).Select(p => p * PixelsPerMillimeter);
                 var projected = Cv2.PerspectiveTransform(outline, toPhoto);
                 if (projected.Any(p => !(p.X >= 0 && p.X < photoSize.Width && p.Y >= 0 && p.Y < photoSize.Height)))
                     throw new InvalidOperationException(InvalidGrid);
 
-                var crop = new Rect((cell.Left + CropInset) * PixelsPerMillimeter,
-                    (cell.Top + CropInset) * PixelsPerMillimeter,
-                    (cell.Width - 2 * CropInset) * PixelsPerMillimeter,
-                    (cell.Height - 2 * CropInset) * PixelsPerMillimeter);
+                var crop = new Rect(cell.Left * PixelsPerMillimeter + inset,
+                    cell.Top * PixelsPerMillimeter + inset,
+                    cell.Width * PixelsPerMillimeter - 2 * inset,
+                    cell.Height * PixelsPerMillimeter - 2 * inset);
 
                 using (var tile = new Mat(page, crop))
                 {
                     byte[] png = null;
                     if (HasInk(tile))
                         Cv2.ImEncode(".png", tile, out png);
-                    cells[row * GridLayout.Columns + column] = new GridCell(row, column, projected, png);
+                    cells[row * layout.Columns + column] = new GridCell(layout.StepAt(row, column), projected, png);
                 }
             }
 

@@ -40,7 +40,8 @@ namespace VisualMusicBlockLooper.Tests
                             {
                                 Cv2.Circle(sheet, new Point(214, 258), 26, Scalar.Black, 5);
                                 Cv2.Circle(sheet, new Point(214, 366), 26, Scalar.Black, 5);
-                                var cells = GridReader.Read(sheet);
+                                var capture = GridReader.Read(sheet);
+                                var cells = capture.Cells;
                                 var scores = await classifier.PredictAsync(cells.Select(cell => cell.Png).ToArray());
                                 Assert.AreEqual(32, scores.Length);
                                 Assert.AreEqual(2, scores.Count(score => score != null));
@@ -57,7 +58,7 @@ namespace VisualMusicBlockLooper.Tests
                                 var paths = scores.Select(score => CellMatch.Label(package.Labels, score, 0))
                                     .Select(label => label == null ? null : library.Resolve(scene.SoundFor(package.Id, label)))
                                     .ToArray();
-                                var mixer = SoundSamples.CreateMixer(paths, scene.Bpm, out var unavailable);
+                                var mixer = SoundSamples.CreateMixer(capture.Layout, paths, scene.Bpm, out var unavailable);
                                 Assert.AreEqual(0, unavailable.Length);
                                 var output = new float[44100 * 2 * 4 + 2048];
                                 mixer.Read(output, 0, output.Length);
@@ -66,6 +67,7 @@ namespace VisualMusicBlockLooper.Tests
                                 CollectionAssert.AreEqual(output.Take(2048).ToArray(), output.Skip(44100 * 2 * 4).ToArray());
                             }
 
+                            await ClassifyTheFullThirtyTwoStepSheet(classifier);
                             completion.TrySetResult(true);
                         }
                         catch (Exception error)
@@ -87,6 +89,27 @@ namespace VisualMusicBlockLooper.Tests
                 Assert.Fail("L'integrazione con WebView2 non ha risposto.");
             await completion.Task;
             thread.Join(6000);
+        }
+
+        private static async Task ClassifyTheFullThirtyTwoStepSheet(ImageClassifier classifier)
+        {
+            var layout = GridLayout.Detailed;
+            using (var sheet = GridTests.RasterizeSheet(layout))
+            {
+                for (int row = 0; row < layout.Rows; row++)
+                for (int column = 0; column < layout.Columns; column++)
+                {
+                    var cell = layout.Cell(row, column);
+                    var center = new Point(cell.X * 4 + 28, cell.Y * 4 + 28);
+                    Cv2.Circle(sheet, center, 12 + (row + column) % 5, Scalar.Black, 4);
+                }
+
+                var captured = GridReader.Read(sheet);
+                Assert.IsTrue(captured.Cells.All(cell => cell.Png != null));
+                var scores = await classifier.PredictAsync(captured.Cells.Select(cell => cell.Png).ToArray());
+                Assert.AreEqual(128, scores.Length);
+                Assert.IsTrue(scores.All(score => score?.Length == classifier.Active.Labels.Length));
+            }
         }
 
         private static async Task RejectIncompatibleReplacement(ImageClassifier classifier)

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using NAudio.Wave;
 using VisualMusicBlockLooper.Scene;
-using VisualMusicBlockLooper.Vision;
 
 namespace VisualMusicBlockLooper.Audio
 {
@@ -12,33 +11,35 @@ namespace VisualMusicBlockLooper.Audio
         public const int Channels = 2;
         private const long SamplesPerMinute = 60L * SampleRate;
 
-        private readonly float[][][] columns;
-        private readonly int bpm;
+        private readonly float[][][] steps;
+        private readonly long stepsPerMinute;
         private readonly List<Voice> voices = new List<Voice>();
         private long position;
         private long nextStep;
 
         public WaveFormat WaveFormat { get; } = WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, Channels);
 
-        public LoopMixer(float[][][] columns, int bpm)
+        public LoopMixer(float[][][] steps, int bpm, int stepsPerBeat)
         {
-            if (columns.Length != GridLayout.Columns)
-                throw new ArgumentException("La sequenza deve avere otto colonne.", nameof(columns));
+            if (steps.Length == 0)
+                throw new ArgumentException("La sequenza deve contenere almeno un passo.", nameof(steps));
             if (bpm < SceneSettings.MinimumBpm || bpm > SceneSettings.MaximumBpm)
                 throw new ArgumentOutOfRangeException(nameof(bpm));
+            if (stepsPerBeat < 1)
+                throw new ArgumentOutOfRangeException(nameof(stepsPerBeat));
 
-            this.columns = columns;
-            this.bpm = bpm;
+            this.steps = steps;
+            stepsPerMinute = (long)bpm * stepsPerBeat;
         }
 
-        private long FrameAtStep(long step) => (step * SamplesPerMinute + bpm / 2) / bpm;
+        private long FrameAtStep(long step) => (step * SamplesPerMinute + stepsPerMinute / 2) / stepsPerMinute;
 
-        public int ColumnAtFrame(long frame)
+        public int StepAtFrame(long frame)
         {
-            long step = frame * bpm / SamplesPerMinute;
+            long step = frame * stepsPerMinute / SamplesPerMinute;
             if (FrameAtStep(step + 1) <= frame)
                 ++step;
-            return (int)(step % GridLayout.Columns);
+            return (int)(step % steps.Length);
         }
 
         public int Read(float[] buffer, int offset, int count)
@@ -52,7 +53,7 @@ namespace VisualMusicBlockLooper.Audio
             while (FrameAtStep(nextStep) < end)
             {
                 long start = FrameAtStep(nextStep);
-                foreach (var clip in columns[nextStep % GridLayout.Columns])
+                foreach (var clip in steps[nextStep % steps.Length])
                     voices.Add(new Voice(start, clip));
                 ++nextStep;
             }

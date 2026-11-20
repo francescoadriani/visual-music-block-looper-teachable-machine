@@ -129,20 +129,20 @@ namespace VisualMusicBlockLooper
 
         private async Task RecognizeAsync()
         {
-            if (cells == null)
+            if (grid == null)
             {
                 status.Text = "Modello importato. Acquisisci il foglio per riconoscere i simboli.";
                 return;
             }
             if (classifier.Active == null)
             {
-                status.Text = "Griglia acquisita. Importa il modello per riconoscere i simboli.";
+                status.Text = grid.Layout.Name + " acquisito. Importa il modello per riconoscere i simboli.";
                 return;
             }
 
-            status.Text = "Riconoscimento dei simboli…";
+            status.Text = grid.Layout.Name + " · Riconoscimento dei simboli…";
             scores = null;
-            scores = await classifier.PredictAsync(cells.Select(cell => cell.Png).ToArray());
+            scores = await classifier.PredictAsync(grid.Cells.Select(cell => cell.Png).ToArray());
             PublishResults();
         }
 
@@ -176,8 +176,8 @@ namespace VisualMusicBlockLooper
             }
 
             pattern = playable == 0 ? null : routes;
-            status.Text = recognized == 0 ? "Nessun simbolo riconosciuto sopra soglia." :
-                "Simboli riconosciuti: " + recognized + " · Caselle con suono: " + playable;
+            status.Text = grid.Layout.Name + " · " + (recognized == 0 ? "Nessun simbolo riconosciuto sopra soglia." :
+                "Simboli riconosciuti: " + recognized + " · Caselle con suono: " + playable);
             if (missing.Count > 0)
                 status.Text += " · WAV mancanti: " + string.Join(", ", missing);
             picture.Invalidate();

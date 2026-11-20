@@ -36,12 +36,13 @@ namespace VisualMusicBlockLooper
         {
             Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 5, Padding = new Padding(24, 12, 24, 12)
         };
-        private readonly Timer previewClock = new Timer { Interval = 66 };
+        private const int PreviewInterval = 66;
+        private readonly Timer previewClock = new Timer { Interval = PreviewInterval };
 
         private Webcam webcam;
         private bool frozen;
         private bool busy;
-        private GridCell[] cells;
+        private GridCapture grid;
 
         public MainForm()
         {
@@ -197,7 +198,7 @@ namespace VisualMusicBlockLooper
         {
             StopPlayback();
             frozen = false;
-            cells = null;
+            grid = null;
             scores = null;
             pattern = null;
             SetImage(null);
@@ -214,7 +215,7 @@ namespace VisualMusicBlockLooper
 
                 StopPlayback();
                 frozen = true;
-                cells = null;
+                grid = null;
                 scores = null;
                 pattern = null;
                 SetImage((Bitmap)frame.Clone());
@@ -222,7 +223,7 @@ namespace VisualMusicBlockLooper
                 status.Text = "Lettura della griglia…";
                 try
                 {
-                    cells = await Task.Run(() => GridReader.Read(frame));
+                    grid = await Task.Run(() => GridReader.Read(frame));
                     await RecognizeAsync();
                 }
                 catch (Exception error)
@@ -265,22 +266,25 @@ namespace VisualMusicBlockLooper
 
         private void DrawOverlay(object sender, PaintEventArgs e)
         {
-            if (picture.Image == null || cells == null)
+            if (picture.Image == null || grid == null)
                 return;
 
+            var cells = grid.Cells;
             float scale = Math.Min((float)picture.Width / picture.Image.Width, (float)picture.Height / picture.Image.Height);
             float left = (picture.Width - picture.Image.Width * scale) / 2;
             float top = (picture.Height - picture.Image.Height * scale) / 2;
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             using (var pen = new Pen(Accent, 2))
             using (var beat = new SolidBrush(Color.FromArgb(66, Accent)))
+            using (var compactFont = grid.Layout.StepsPerBeat > 1 ? new Font(Font.FontFamily, 8) : null)
             {
+                var labelFont = compactFont ?? Font;
                 for (int index = 0; index < cells.Length; index++)
                 {
                     var cell = cells[index];
                     var polygon = Array.ConvertAll(cell.Outline, point =>
                         new PointF(left + point.X * scale, top + point.Y * scale));
-                    if (cell.Column == playingColumn)
+                    if (cell.Step == playingStep)
                         e.Graphics.FillPolygon(beat, polygon);
 
                     if (cell.Png == null)
@@ -297,12 +301,12 @@ namespace VisualMusicBlockLooper
                     var text = library?.Resolve(sound) == null
                         ? label + " · Nessun suono" : Path.GetFileNameWithoutExtension(sound);
                     float x = polygon.Min(point => point.X) + 3;
-                    float y = polygon.Average(point => point.Y);
+                    float y = polygon.Average(point => point.Y) - (compactFont == null ? 0 : labelFont.Height / 2f);
                     int width = Math.Max(10, (int)(polygon.Max(point => point.X) - x));
-                    var bounds = new Rectangle((int)x, (int)y, width, Font.Height + 4);
+                    var bounds = new Rectangle((int)x, (int)y, width, labelFont.Height + 4);
                     using (var brush = new SolidBrush(Color.FromArgb(224, Canvas)))
                         e.Graphics.FillRectangle(brush, bounds);
-                    TextRenderer.DrawText(e.Graphics, text, Font, bounds, Foreground,
+                    TextRenderer.DrawText(e.Graphics, text, labelFont, bounds, Foreground,
                         TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
                 }
             }
@@ -328,8 +332,8 @@ namespace VisualMusicBlockLooper
                 return;
             }
 
-            previewClock.Dispose();
             StopPlayback();
+            previewClock.Dispose();
             classifier.Dispose();
             webcam?.Dispose();
             SetImage(null);

@@ -31,7 +31,7 @@ namespace VisualMusicBlockLooper.Audio
 
         public void Play() => output.Play();
 
-        public int Column => mixer.ColumnAtFrame(output.GetPosition() / output.OutputWaveFormat.BlockAlign);
+        public int Step => mixer.StepAtFrame(output.GetPosition() / output.OutputWaveFormat.BlockAlign);
 
         public void Dispose() => output.Dispose();
     }

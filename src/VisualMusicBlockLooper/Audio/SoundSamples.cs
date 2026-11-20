@@ -10,8 +10,11 @@ namespace VisualMusicBlockLooper.Audio
 {
     internal static class SoundSamples
     {
-        public static LoopMixer CreateMixer(string[] selected, int bpm, out string[] unavailable)
+        public static LoopMixer CreateMixer(GridLayout layout, string[] selected, int bpm, out string[] unavailable)
         {
+            if (selected.Length != layout.Rows * layout.Columns)
+                throw new ArgumentException("La sequenza non corrisponde al foglio acquisito.", nameof(selected));
+
             var cache = new Dictionary<string, float[]>(StringComparer.OrdinalIgnoreCase);
             var missing = new List<string>();
             foreach (var path in selected.Where(path => path != null).Distinct(StringComparer.OrdinalIgnoreCase))
@@ -30,19 +33,16 @@ namespace VisualMusicBlockLooper.Audio
             unavailable = missing.ToArray();
             if (cache.Count == 0)
                 throw new InvalidDataException("Nessun WAV riproducibile. " + string.Join(", ", unavailable));
-            var columns = new float[GridLayout.Columns][][];
-            for (int column = 0; column < GridLayout.Columns; column++)
+            var steps = Enumerable.Range(0, layout.StepCount)
+                .Select(_ => new List<float[]>(GridLayout.Lanes)).ToArray();
+            for (int row = 0; row < layout.Rows; row++)
+            for (int column = 0; column < layout.Columns; column++)
             {
-                var voices = new List<float[]>(GridLayout.Rows);
-                for (int row = 0; row < GridLayout.Rows; row++)
-                {
-                    var path = selected[row * GridLayout.Columns + column];
-                    if (path != null && cache.TryGetValue(path, out var samples))
-                        voices.Add(samples);
-                }
-                columns[column] = voices.ToArray();
+                var path = selected[row * layout.Columns + column];
+                if (path != null && cache.TryGetValue(path, out var samples))
+                    steps[layout.StepAt(row, column)].Add(samples);
             }
-            return new LoopMixer(columns, bpm);
+            return new LoopMixer(steps.Select(voices => voices.ToArray()).ToArray(), bpm, layout.StepsPerBeat);
         }
 
         public static float[] Read(string path)
