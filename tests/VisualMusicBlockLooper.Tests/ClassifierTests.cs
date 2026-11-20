@@ -1,12 +1,17 @@
 using System;
-using System.Drawing;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json.Linq;
+using OpenCvSharp;
+using VisualMusicBlockLooper.Audio;
 using VisualMusicBlockLooper.Recognition;
+using VisualMusicBlockLooper.Scene;
+using VisualMusicBlockLooper.Vision;
 
 namespace VisualMusicBlockLooper.Tests
 {
@@ -15,7 +20,7 @@ namespace VisualMusicBlockLooper.Tests
     {
         [TestMethod]
         [TestCategory("WebView2")]
-        public async Task ClassifiesLocallyWithTheActualModel()
+        public async Task TurnsARecognizedGridIntoALoopWithTheActualModel()
         {
             var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             var thread = new Thread(() =>
@@ -29,19 +34,36 @@ namespace VisualMusicBlockLooper.Tests
                         {
                             var package = ModelPackage.Load(ModelPackageTests.Sample);
                             await classifier.LoadAsync(package);
-                            using (var tile = new Bitmap(100, 100))
-                            using (var graphics = Graphics.FromImage(tile))
-                            using (var stream = new MemoryStream())
+                            await RejectIncompatibleReplacement(classifier);
+                            Assert.AreSame(package, classifier.Active);
+                            using (var sheet = GridTests.RasterizeSheet())
                             {
-                                graphics.Clear(Color.White);
-                                graphics.DrawEllipse(Pens.Black, 20, 20, 60, 60);
-                                tile.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
-                                var scores = await classifier.PredictAsync(new[] { stream.ToArray(), null, stream.ToArray() });
-                                Assert.AreEqual(3, scores.Length);
+                                Cv2.Circle(sheet, new Point(214, 258), 26, Scalar.Black, 5);
+                                Cv2.Circle(sheet, new Point(214, 366), 26, Scalar.Black, 5);
+                                var cells = GridReader.Read(sheet);
+                                var scores = await classifier.PredictAsync(cells.Select(cell => cell.Png).ToArray());
+                                Assert.AreEqual(32, scores.Length);
+                                Assert.AreEqual(2, scores.Count(score => score != null));
                                 Assert.IsNull(scores[1]);
                                 Assert.AreEqual(4, scores[0].Length);
                                 Assert.AreEqual(1.0, scores[0].Sum(), 0.001);
-                                CollectionAssert.AreEqual(scores[0], scores[2]);
+                                Assert.IsNotNull(scores[8]);
+
+                                var library = SoundLibrary.Load(SceneSettings.DefaultSoundsDirectory);
+                                var scene = new SceneSettings();
+                                foreach (var label in package.Labels)
+                                    scene.Assign(package.Id, label, "kick-01.wav");
+
+                                var paths = scores.Select(score => CellMatch.Label(package.Labels, score, 0))
+                                    .Select(label => label == null ? null : library.Resolve(scene.SoundFor(package.Id, label)))
+                                    .ToArray();
+                                var mixer = SoundSamples.CreateMixer(paths, scene.Bpm, out var unavailable);
+                                Assert.AreEqual(0, unavailable.Length);
+                                var output = new float[44100 * 2 * 4 + 2048];
+                                mixer.Read(output, 0, output.Length);
+                                Assert.IsTrue(output.Take(2048).Any(sample => Math.Abs(sample) > 0.01f));
+                                Assert.IsTrue(output.Skip(44100).Take(2048).All(sample => sample == 0));
+                                CollectionAssert.AreEqual(output.Take(2048).ToArray(), output.Skip(44100 * 2 * 4).ToArray());
                             }
 
                             completion.TrySetResult(true);
@@ -65,6 +87,32 @@ namespace VisualMusicBlockLooper.Tests
                 Assert.Fail("L'integrazione con WebView2 non ha risposto.");
             await completion.Task;
             thread.Join(6000);
+        }
+
+        private static async Task RejectIncompatibleReplacement(ImageClassifier classifier)
+        {
+            string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".zip");
+            try
+            {
+                File.Copy(ModelPackageTests.Sample, path);
+                using (var archive = ZipFile.Open(path, ZipArchiveMode.Update))
+                {
+                    var oldMetadata = archive.GetEntry("metadata.json");
+                    JObject changed;
+                    using (var reader = new StreamReader(oldMetadata.Open()))
+                        changed = JObject.Parse(reader.ReadToEnd());
+                    changed["imageSize"] = 223;
+                    oldMetadata.Delete();
+                    using (var writer = new StreamWriter(archive.CreateEntry("metadata.json").Open()))
+                        writer.Write(changed.ToString());
+                }
+
+                await Assert.ThrowsExceptionAsync<InvalidDataException>(() => classifier.LoadAsync(ModelPackage.Load(path)));
+            }
+            finally
+            {
+                File.Delete(path);
+            }
         }
     }
 }

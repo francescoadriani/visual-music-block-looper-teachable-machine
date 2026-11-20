@@ -1,11 +1,8 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using NAudio.Wave;
 using VisualMusicBlockLooper.Audio;
-using VisualMusicBlockLooper.Vision;
 
 namespace VisualMusicBlockLooper
 {
@@ -32,6 +29,7 @@ namespace VisualMusicBlockLooper
                 return;
             }
 
+            PublishResults();
             if (pattern == null)
                 return;
 
@@ -42,12 +40,17 @@ namespace VisualMusicBlockLooper
             status.Text = "Caricamento dei campioni WAV…";
             try
             {
-                var mixer = await Task.Run(() => LoadMixer(selected, bpm));
-                player = new LoopPlayer(mixer);
+                var prepared = await Task.Run(() =>
+                {
+                    var mixer = SoundSamples.CreateMixer(selected, bpm, out var unavailable);
+                    return (Mixer: mixer, Unavailable: unavailable);
+                });
+                player = new LoopPlayer(prepared.Mixer);
                 player.Stopped += OnPlaybackStopped;
                 player.Play();
                 playingColumn = 0;
-                status.Text = message;
+                status.Text = prepared.Unavailable.Length == 0 ? message :
+                    message + " · WAV saltati: " + string.Join(", ", prepared.Unavailable);
                 picture.Invalidate();
             }
             catch (Exception error)
@@ -59,25 +62,6 @@ namespace VisualMusicBlockLooper
             {
                 SetBusy(false);
             }
-        }
-
-        private static LoopMixer LoadMixer(string[] selected, int bpm)
-        {
-            var cache = selected.Where(path => path != null).Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(path => path, SoundSamples.Read, StringComparer.OrdinalIgnoreCase);
-            var columns = new float[GridLayout.Columns][][];
-            for (int column = 0; column < GridLayout.Columns; column++)
-            {
-                var voices = new List<float[]>(GridLayout.Rows);
-                for (int row = 0; row < GridLayout.Rows; row++)
-                {
-                    var path = selected[row * GridLayout.Columns + column];
-                    if (path != null)
-                        voices.Add(cache[path]);
-                }
-                columns[column] = voices.ToArray();
-            }
-            return new LoopMixer(columns, bpm);
         }
 
         private void UpdatePlaybackPosition()

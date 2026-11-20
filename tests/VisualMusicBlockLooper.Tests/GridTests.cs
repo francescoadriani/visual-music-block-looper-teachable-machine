@@ -55,7 +55,7 @@ namespace VisualMusicBlockLooper.Tests
             }
         }
 
-        private static Mat RasterizeSheet()
+        internal static Mat RasterizeSheet()
         {
             var document = XDocument.Parse(GridLayout.CreateSvg());
             var root = document.Root;

@@ -1,13 +1,50 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
+using VisualMusicBlockLooper.Vision;
 
 namespace VisualMusicBlockLooper.Audio
 {
     internal static class SoundSamples
     {
+        public static LoopMixer CreateMixer(string[] selected, int bpm, out string[] unavailable)
+        {
+            var cache = new Dictionary<string, float[]>(StringComparer.OrdinalIgnoreCase);
+            var missing = new List<string>();
+            foreach (var path in selected.Where(path => path != null).Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    cache.Add(path, Read(path));
+                }
+                catch (Exception error) when (error is IOException || error is InvalidDataException || error is UnauthorizedAccessException ||
+                    error is ArgumentException || error is FormatException || error is NotSupportedException)
+                {
+                    missing.Add(Path.GetFileName(path));
+                }
+            }
+
+            unavailable = missing.ToArray();
+            if (cache.Count == 0)
+                throw new InvalidDataException("Nessun WAV riproducibile. " + string.Join(", ", unavailable));
+            var columns = new float[GridLayout.Columns][][];
+            for (int column = 0; column < GridLayout.Columns; column++)
+            {
+                var voices = new List<float[]>(GridLayout.Rows);
+                for (int row = 0; row < GridLayout.Rows; row++)
+                {
+                    var path = selected[row * GridLayout.Columns + column];
+                    if (path != null && cache.TryGetValue(path, out var samples))
+                        voices.Add(samples);
+                }
+                columns[column] = voices.ToArray();
+            }
+            return new LoopMixer(columns, bpm);
+        }
+
         public static float[] Read(string path)
         {
             using (var wave = new WaveFileReader(path))

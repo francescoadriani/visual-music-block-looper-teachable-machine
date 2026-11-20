@@ -45,6 +45,10 @@ namespace VisualMusicBlockLooper.Tests
                 Assert.AreEqual(120, store.Load(out warning).Bpm);
                 Assert.IsNotNull(warning);
                 Assert.AreEqual("{non valido", File.ReadAllText(path));
+
+                File.WriteAllText(path, "{\"Bpm\":2000}");
+                Assert.AreEqual(120, store.Load(out warning).Bpm);
+                Assert.IsNotNull(warning);
             }
             finally
             {

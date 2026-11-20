@@ -157,11 +157,10 @@ namespace VisualMusicBlockLooper
                     return new Webcam(selected.MonikerString);
                 });
                 status.Text = "In attesa della webcam…";
-                if (persist)
-                {
+                if (persist || string.IsNullOrEmpty(scene.CameraId))
                     scene.CameraId = selected.MonikerString;
+                if (persist)
                     SaveScene();
-                }
             }
             catch (Exception error)
             {

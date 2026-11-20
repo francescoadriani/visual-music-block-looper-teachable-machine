@@ -12,6 +12,31 @@ function decodePng(bytes) {
     });
 }
 
+async function loadCheckedModel(root) {
+    const model = await tmImage.load(root + "/model.json", root + "/metadata.json");
+    try {
+        const labels = model.getClassLabels();
+        if (model.getTotalClasses() !== labels.length) {
+            throw new Error("Il numero delle etichette non coincide con quello delle classi.");
+        }
+
+        const probe = document.createElement("canvas");
+        probe.width = probe.height = 16;
+        const context = probe.getContext("2d");
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, probe.width, probe.height);
+        const predictions = await model.predict(probe);
+        if (predictions.length !== labels.length || predictions.some(item =>
+            !Number.isFinite(item.probability) || item.probability < 0 || item.probability > 1.00001)) {
+            throw new Error("Il modello non ha restituito confidenze valide.");
+        }
+        return model;
+    } catch (error) {
+        model.model.dispose();
+        throw error;
+    }
+}
+
 async function handle(request) {
     if (request.op === "release") {
         const existing = models.get(request.model);
@@ -26,14 +51,9 @@ async function handle(request) {
     try {
         if (request.op === "load") {
             const root = "/models/" + request.model;
-            const model = await tmImage.load(root + "/model.json", root + "/metadata.json");
-            const labels = model.getClassLabels();
-            if (model.getTotalClasses() !== labels.length) {
-                model.model.dispose();
-                throw new Error("Il numero delle etichette non coincide con quello delle classi.");
-            }
+            const model = await loadCheckedModel(root);
             models.set(request.model, model);
-            reply.labels = labels;
+            reply.labels = model.getClassLabels();
         } else if (request.op === "predict") {
             const model = models.get(request.model);
             if (!model) {

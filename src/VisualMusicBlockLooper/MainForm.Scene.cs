@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -159,20 +160,26 @@ namespace VisualMusicBlockLooper
             int recognized = 0;
             int playable = 0;
             var routes = new string[scores.Length];
+            var missing = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
             for (int index = 0; index < scores.Length; index++)
             {
                 var label = RecognizedLabel(index);
                 if (label == null)
                     continue;
                 ++recognized;
-                routes[index] = library?.Resolve(scene.SoundFor(classifier.Active.Id, label));
+                var assigned = scene.SoundFor(classifier.Active.Id, label);
+                routes[index] = library?.Resolve(assigned);
                 if (routes[index] != null)
                     ++playable;
+                else if (assigned != null)
+                    missing.Add(assigned);
             }
 
             pattern = playable == 0 ? null : routes;
             status.Text = recognized == 0 ? "Nessun simbolo riconosciuto sopra soglia." :
                 "Simboli riconosciuti: " + recognized + " · Caselle con suono: " + playable;
+            if (missing.Count > 0)
+                status.Text += " · WAV mancanti: " + string.Join(", ", missing);
             picture.Invalidate();
             UpdateButtons();
         }

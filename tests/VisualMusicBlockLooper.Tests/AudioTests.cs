@@ -62,6 +62,21 @@ namespace VisualMusicBlockLooper.Tests
             Assert.IsNull(library.Resolve(Path.Combine("..", "kick-01.wav")));
         }
 
+        [TestMethod]
+        public void PlaysAvailableSamplesWhenAnotherFileHasDisappeared()
+        {
+            var pattern = new string[32];
+            var library = SoundLibrary.Load(SceneSettings.DefaultSoundsDirectory);
+            pattern[0] = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".wav");
+            pattern[8] = library.Resolve("kick-01.wav");
+
+            var mixer = SoundSamples.CreateMixer(pattern, 120, out var unavailable);
+            CollectionAssert.AreEqual(new[] { Path.GetFileName(pattern[0]) }, unavailable);
+            var output = new float[2048];
+            mixer.Read(output, 0, output.Length);
+            Assert.IsTrue(output.Any(sample => Math.Abs(sample) > 0.01f));
+        }
+
         private static float[][][] EmptyPattern() =>
             Enumerable.Range(0, 8).Select(_ => Array.Empty<float[]>()).ToArray();
     }

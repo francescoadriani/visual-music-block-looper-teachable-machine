@@ -34,7 +34,8 @@ namespace VisualMusicBlockLooper.Scene
 
                 return settings;
             }
-            catch (Exception error) when (error is IOException || error is UnauthorizedAccessException || error is JsonException)
+            catch (Exception error) when (error is IOException || error is InvalidDataException ||
+                error is UnauthorizedAccessException || error is JsonException)
             {
                 warning = "Impostazioni di scena non disponibili. Verranno usati i valori iniziali. " + error.Message;
                 return new SceneSettings();
