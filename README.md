@@ -1,6 +1,13 @@
 # Visual Music Block Looper
 
-Disegna simboli su un foglio, fotografali con la webcam e ascolta la sequenza. Ogni colonna è un quarto. Le quattro righe suonano in parallelo e il loop riparte dopo l'ottava colonna.
+Disegna simboli su un foglio, fotografali con la webcam e ascolta la sequenza. Le quattro righe di ogni blocco suonano in parallelo. L'app riconosce il formato dai quattro marcatori.
+
+| Foglio da stampare | Sequenza | Durata di una casella |
+| --- | --- | --- |
+| [Foglio 1 · 4×8](assets/foglio-loop-a4.pdf) | 8 passi | Un quarto |
+| [Foglio 2 · due blocchi 4×16](assets/foglio-loop-32-passi-a4.pdf) | Passi 1–16 sopra, poi 17–32 sotto | Un sedicesimo |
+
+Entrambi i fogli coprono otto quarti. A 120 BPM il giro dura 4 secondi in entrambi i formati.
 
 ## Avvio su Windows
 
@@ -10,11 +17,11 @@ Serve un PC Windows x64 con una versione di .NET Framework compatibile con il ta
 
 ## Dal foglio al loop
 
-1. Stampa il [foglio A4 orizzontale](assets/foglio-loop-a4.pdf) a dimensione effettiva. Disegna un solo simbolo per casella, dentro il bordo. Lascia in bianco le pause.
+1. Scegli uno dei due fogli e stampalo in A4 orizzontale a dimensione effettiva (100%). Disegna un solo simbolo per casella, dentro il bordo. Lascia in bianco le pause.
 2. Seleziona la webcam. Premi **Importa modello** e scegli lo ZIP scaricato da Teachable Machine con **Image Project → Export Model → TensorFlow.js → Download**. Puoi iniziare con il [modello incluso](assets/modelli%20teachable%20machine/tm-my-image-model.zip), che riconosce cerchio, quadrato, croce e triangolo.
 3. Per ogni etichetta scegli un WAV oppure **Nessun suono**. Sono inclusi otto campioni acustici ed elettronici. Per usare i tuoi file scegli **Cartella WAV**. Usa campioni WAV mono o stereo.
-4. Inquadra tutti e quattro i marcatori con il foglio in piano e in buona luce, quindi premi **Acquisisci**. Nella foto congelata compaiono i bordi riconosciuti e i nomi dei campioni. Premi **Torna alla webcam** per rivedere l'anteprima.
-5. Premi **Start**. La colonna corrente si illumina mentre suona. A 120 BPM ogni giro dura 4 secondi. **Stop** interrompe il loop.
+4. Inquadra un solo foglio e tutti e quattro i suoi marcatori, in buona luce, poi premi **Acquisisci**. L'app indica il formato rilevato e sovrappone alla foto i bordi riconosciuti e i nomi dei campioni. Premi **Torna alla webcam** per rivedere l'anteprima.
+5. Premi **Start**. La colonna corrente si illumina nel blocco che sta suonando. **Stop** interrompe il loop.
 
 La soglia iniziale è 85%. Puoi regolarla e vedere subito il risultato sulla stessa foto. Per addestrare un nuovo modello raccogli esempi delle singole caselle, con disegni, illuminazione e sfondo simili a quelli d'uso. Aggiungi una classe `VUOTO` con esempi senza disegni. L'app lascia in silenzio quella classe e filtra anche le caselle chiaramente bianche.
 
@@ -35,10 +42,12 @@ dotnet publish src/VisualMusicBlockLooper -c Release -o artifacts/VisualMusicBlo
 
 I test coprono il modello incluso in WebView2, la griglia ruotata e in prospettiva, il ripristino della scena e il mixer. I test con categoria `Hardware` usano l'uscita audio predefinita e una webcam USB, se presente. I test con categoria `WebView2` richiedono il runtime e una sessione desktop.
 
-Quando cambia il layout, rigenera l'SVG dalla cartella principale del repository con `--export-grid` e poi esegui lo script PDF con Python e ReportLab.
+Quando cambia un layout, rigenera il relativo SVG dalla cartella principale del repository, poi esegui lo script PDF con Python e ReportLab.
 
 ```powershell
 $app = 'src/VisualMusicBlockLooper/bin/Release/net47/VisualMusicBlockLooper.exe'
 Start-Process -FilePath $app -ArgumentList '--export-grid assets/foglio-loop-a4.svg' -WindowStyle Hidden -Wait
 python scripts/export-grid-pdf.py
+Start-Process -FilePath $app -ArgumentList '--export-grid-32 assets/foglio-loop-32-passi-a4.svg' -WindowStyle Hidden -Wait
+python scripts/export-grid-pdf.py assets/foglio-loop-32-passi-a4.svg
 ```

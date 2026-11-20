@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 from xml.etree import ElementTree
 
@@ -6,10 +7,15 @@ from reportlab.pdfgen.canvas import Canvas
 
 
 assets = Path(__file__).resolve().parents[1] / "assets"
-sheet = ElementTree.parse(assets / "foglio-loop-a4.svg").getroot()
+source = Path(sys.argv[1]) if len(sys.argv) > 1 else assets / "foglio-loop-a4.svg"
+sheet = ElementTree.parse(source).getroot()
 _, _, width, height = map(float, sheet.attrib["viewBox"].split())
-pdf = Canvas(str(assets / "foglio-loop-a4.pdf"), (width * mm, height * mm), invariant=1)
-pdf.setTitle("Visual Music Block Looper - Foglio A4")
+pdf = Canvas(str(source.with_suffix(".pdf")), (width * mm, height * mm), invariant=1)
+heading = sheet.find("{http://www.w3.org/2000/svg}text")
+title = "Visual Music Block Looper - Foglio A4"
+if heading is not None and source.name != "foglio-loop-a4.svg":
+    title = heading.text
+pdf.setTitle(title)
 
 
 def coordinate(element, name):
