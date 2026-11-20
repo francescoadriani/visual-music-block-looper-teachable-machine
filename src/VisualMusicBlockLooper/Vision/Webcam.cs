@@ -60,7 +60,11 @@ namespace VisualMusicBlockLooper.Vision
         private void OnError(object sender, VideoSourceErrorEventArgs args)
         {
             lock (frameLock)
+            {
                 error = args.Description;
+                latest?.Dispose();
+                latest = null;
+            }
         }
 
         public void Dispose()
