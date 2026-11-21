@@ -87,7 +87,7 @@ Read the columns from left to right. Shapes in the same column play together. Th
 ## 7. Play it and change something
 
 1. Set **BPM** (beats per minute) to **120**. Place the sheet in good light and aim the webcam so all four markers are visible.
-2. Click **Acquisisci** (Capture). The preview freezes. Look for the recognized boxes and their sound names. **Soglia %** sets how sure the app must be to use a prediction. Start at **85%**.
+2. Click **Acquisisci** (Capture). The preview freezes. The app uses the paper margins to correct the color of the captured boxes. The status shows how many boxes contain marks and how many shapes pass **Soglia %**, the confidence threshold. Start at **85%** and look for the recognized boxes and their sound names.
 3. Click **Start** and watch the highlighted column move as you listen. Press **Stop** to edit the groove. Move one shape to a different box or give a shape a different WAV. If you changed the drawing, take another photo and listen for what changed.
 
 To take another photo, click **Torna alla webcam** (Back to the camera), check the framing, and click **Acquisisci**. If the app missed a symbol, try brighter light or a darker outline.
