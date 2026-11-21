@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Xml.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -50,6 +51,99 @@ namespace VisualMusicBlockLooper.Tests
                 Assert.ThrowsException<InvalidOperationException>(() => GridReader.Read(page));
             }
         }
+
+        [TestMethod]
+        public void RecoversMarkersNearTheEdgeOfASmallImage()
+        {
+            using (var page = RasterizeSheet())
+            using (var small = new Mat())
+            using (var dictionary = CvAruco.GetPredefinedDictionary(GridLayout.Dictionary))
+            {
+                Cv2.Line(page, new Point(52 * 4, 61 * 4), new Point(58 * 4, 69 * 4), Scalar.Black, 3);
+                Cv2.Resize(page, small, new Size(640, 453), 0, 0, InterpolationFlags.Area);
+                using (var photo = new Mat(small, new Rect(29, 0, 611, small.Height)))
+                {
+                    CvAruco.DetectMarkers(photo, dictionary, out _, out var detected,
+                        new DetectorParameters { CornerRefinementMethod = CornerRefineMethod.Subpix }, out _);
+                    Assert.IsNull(GridLayout.FromMarkers(detected));
+
+                    var capture = GridReader.Read(photo);
+                    Assert.AreSame(GridLayout.Original, capture.Layout);
+                    CollectionAssert.AreEqual(new[] { 0 }, MarkedCells(capture));
+                }
+            }
+        }
+
+        [TestMethod]
+        public void KeepsTheEmptyCellsSilentOnASmallRealCameraImage()
+        {
+            using (var photo = ReadFixture("foglio-2.png", 640))
+            {
+                var capture = GridReader.Read(photo);
+                Assert.AreSame(GridLayout.Detailed, capture.Layout);
+                CollectionAssert.AreEqual(new[] { 0, 7, 9, 10, 20, 28, 34, 38, 46, 48,
+                    64, 71, 73, 74, 84, 92, 98, 102, 110 }, MarkedCells(capture));
+            }
+        }
+
+        [TestMethod]
+        public void CombinesComplementaryMarkerDetections()
+        {
+            using (var photo = ReadFixture("foglio-2.png", 357))
+            {
+                var capture = GridReader.Read(photo);
+                Assert.AreSame(GridLayout.Detailed, capture.Layout);
+                Assert.AreEqual(128, capture.Cells.Length);
+            }
+        }
+
+        [TestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public void UsesThePaperMarginsToCorrectColorUnderUnevenLighting(bool detailed)
+        {
+            var layout = detailed ? GridLayout.Detailed : GridLayout.Original;
+            using (var page = RasterizeSheet(layout))
+            {
+                var target = layout.Cell(0, 0);
+                Cv2.Circle(page, new Point(target.X * 4 + target.Width * 2, target.Y * 4 + target.Height * 2),
+                    target.Width, new Scalar(40), 3);
+
+                using (var tinted = new Mat())
+                {
+                    Cv2.CvtColor(page, tinted, ColorConversionCodes.GRAY2BGR);
+                    for (int x = 0; x < tinted.Width; x++)
+                    {
+                        double light = 0.60 + 0.25 * x / tinted.Width;
+                        using (var column = tinted.Col(x))
+                            Cv2.Multiply(column, new Scalar(light * 0.8, light, light * 1.12), column);
+                    }
+
+                    var capture = GridReader.Read(tinted);
+                    CollectionAssert.AreEqual(new[] { 0 }, MarkedCells(capture));
+                    using (var tile = Cv2.ImDecode(capture.Cells[0].Png, ImreadModes.Color))
+                    {
+                        var paper = tile.At<Vec3b>(tile.Rows / 2, tile.Cols / 2);
+                        Assert.IsTrue(paper.Item0 >= 210 && paper.Item1 >= 210 && paper.Item2 >= 210, paper.ToString());
+                        Assert.IsTrue(Math.Abs(paper.Item0 - paper.Item2) <= 16, paper.ToString());
+                    }
+                }
+            }
+        }
+
+        internal static Mat ReadFixture(string name, int width)
+        {
+            using (var source = Cv2.ImRead(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "fixtures", name)))
+            {
+                Assert.IsFalse(source.Empty(), name);
+                var resized = new Mat();
+                Cv2.Resize(source, resized, new Size(width, source.Height * width / source.Width), 0, 0, InterpolationFlags.Area);
+                return resized;
+            }
+        }
+
+        private static int[] MarkedCells(GridCapture capture) =>
+            Enumerable.Range(0, capture.Cells.Length).Where(index => capture.Cells[index].Png != null).ToArray();
 
         [TestMethod]
         [DataRow(false)]

@@ -20,5 +20,7 @@
     <Reference Include="System.IO.Compression.FileSystem" />
     <None Include="$(DemoModelPath)"
           Link="model-fixture.zip" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../docs/readme/groove-sheet-in-the-app.png"
+          Link="fixtures/foglio-2.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

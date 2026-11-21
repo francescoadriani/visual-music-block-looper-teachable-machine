@@ -176,8 +176,9 @@ namespace VisualMusicBlockLooper
             }
 
             pattern = playable == 0 ? null : routes;
-            status.Text = grid.Layout.Name + " · " + (recognized == 0 ? "Nessun simbolo riconosciuto sopra soglia." :
-                "Simboli riconosciuti: " + recognized + " · Caselle con suono: " + playable);
+            int inkCells = grid.Cells.Count(cell => cell.Png != null);
+            status.Text = grid.Layout.Name + " · Caselle con tratti: " + inkCells +
+                " · Simboli sopra soglia: " + recognized + " · Caselle con suono: " + playable;
             if (missing.Count > 0)
                 status.Text += " · WAV mancanti: " + string.Join(", ", missing);
             picture.Invalidate();

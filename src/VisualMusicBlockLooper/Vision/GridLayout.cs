@@ -56,9 +56,11 @@ namespace VisualMusicBlockLooper.Vision
 
         private bool OwnsMarker(int id) => id >= firstMarker && id < firstMarker + MarkerCount;
 
+        public static bool IsSheetMarker(int id) => Original.OwnsMarker(id) || Detailed.OwnsMarker(id);
+
         public static GridLayout FromMarkers(int[] ids)
         {
-            var known = ids.Where(id => Original.OwnsMarker(id) || Detailed.OwnsMarker(id)).ToArray();
+            var known = ids.Where(IsSheetMarker).ToArray();
             if (known.Length != MarkerCount || known.Distinct().Count() != MarkerCount)
                 return null;
             if (known.All(Original.OwnsMarker))

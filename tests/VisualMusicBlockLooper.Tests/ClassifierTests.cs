@@ -67,6 +67,12 @@ namespace VisualMusicBlockLooper.Tests
                                 CollectionAssert.AreEqual(output.Take(2048).ToArray(), output.Skip(44100 * 2 * 4).ToArray());
                             }
 
+                            await ClassifyRealPhoto(classifier, "foglio-2.png", 16,
+                                (0, "triangolo"), (7, "triangolo"), (9, "triangolo"), (10, "triangolo"),
+                                (20, "cerchio"), (28, "cerchio"), (34, "quadrato"), (38, "quadrato"),
+                                (46, "quadrato"), (48, "croce"), (64, "triangolo"), (71, "triangolo"),
+                                (73, "triangolo"), (74, "triangolo"), (84, "cerchio"), (92, "cerchio"),
+                                (98, "quadrato"), (102, "quadrato"), (110, "quadrato"));
                             await ClassifyTheFullThirtyTwoStepSheet(classifier);
                             completion.TrySetResult(true);
                         }
@@ -89,6 +95,25 @@ namespace VisualMusicBlockLooper.Tests
                 Assert.Fail("L'integrazione con WebView2 non ha risposto.");
             await completion.Task;
             thread.Join(6000);
+        }
+
+        private static async Task ClassifyRealPhoto(ImageClassifier classifier, string fixture, int minimumAccepted,
+            params (int Cell, string Label)[] expected)
+        {
+            using (var photo = GridTests.ReadFixture(fixture, 1280))
+            {
+                var captured = GridReader.Read(photo);
+                var scores = await classifier.PredictAsync(captured.Cells.Select(cell => cell.Png).ToArray());
+                var recognized = Enumerable.Range(0, scores.Length)
+                    .Select(index => (Cell: index, Label: CellMatch.Label(classifier.Active.Labels, scores[index], 50)))
+                    .Where(result => result.Label != null).ToArray();
+                foreach (var result in recognized)
+                    Assert.IsTrue(expected.Contains(result),
+                        $"{fixture}: casella {result.Cell + 1} riconosciuta come {result.Label}");
+
+                Console.WriteLine($"{fixture}: {recognized.Length}/{expected.Length} simboli corretti alla soglia del 50%.");
+                Assert.IsTrue(recognized.Length >= minimumAccepted, fixture);
+            }
         }
 
         private static async Task ClassifyTheFullThirtyTwoStepSheet(ImageClassifier classifier)
