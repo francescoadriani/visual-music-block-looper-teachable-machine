@@ -1,48 +1,116 @@
 # Visual Music Block Looper
 
-Disegna simboli su un foglio, fotografali con la webcam e ascolta la sequenza. Le quattro righe di ogni blocco suonano in parallelo. L'app riconosce il formato dai quattro marcatori.
+[🇮🇹 Leggi la guida in italiano](README-it.md)
 
-| Foglio da stampare | Sequenza | Durata di una casella |
-| --- | --- | --- |
-| [Foglio 1 · 4×8](assets/foglio-loop-a4.pdf) | 8 passi | Un quarto |
-| [Foglio 2 · due blocchi 4×16](assets/foglio-loop-32-passi-a4.pdf) | Passi 1–16 sopra, poi 17–32 sotto | Un sedicesimo |
+Draw a beat on paper, show it to your webcam, and hear it play. You’ll teach the computer four shapes, give each shape a drum sound, then arrange them in a **groove**. A groove is a rhythm you can play on repeat.
 
-Entrambi i fogli coprono otto quarti. A 120 BPM il giro dura 4 secondi in entrambi i formati.
+## 1. Get your gear ready
 
-## Avvio su Windows
+- A Windows x64 PC, a webcam and speakers or headphones.
+- A browser such as Chrome and internet access to train your model.
+- A dark pen, some white paper for practice, and one printed groove sheet. Start with [Sheet 1, the 4×8 grid](assets/foglio-loop-a4.pdf). [Sheet 2, the 32-step grid](assets/foglio-loop-32-passi-a4.pdf), gives you more places to put sounds.
+- A copy of this project. For the source code, use **Code → Download ZIP** on this GitHub page, then right-click the download in File Explorer and choose **Extract All**. If your teacher gives you the ready-to-run app, extract its whole folder and go to Step 5 after exporting your model. [GitHub download instructions](https://docs.github.com/en/repositories/working-with-files/using-files/downloading-source-code-archives)
 
-Estrai l'intero archivio di distribuzione e apri `VisualMusicBlockLooper.exe`. L'app si apre a tutto schermo. Premi **Esc** per passare alla finestra ridimensionabile.
+## 2. Train the computer to read your shapes
 
-Serve un PC Windows x64 con una versione di .NET Framework compatibile con il target **4.7**, WebView2 Runtime, Visual C++ Redistributable x64, una webcam e un'uscita audio. Per un laboratorio senza rete, prepara il programma di installazione offline di WebView2 sui PC. L'app usa i file locali per il riconoscimento e l'audio. [Versioni .NET Framework](https://learn.microsoft.com/en-us/dotnet/framework/install/versions-and-dependencies) · [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) · [Visual C++ Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist)
+1. Open **Google Teachable Machine**, click **Get Started**, then choose **Image Project → Standard image model**. [Open Teachable Machine](https://teachablemachine.withgoogle.com/)
+2. Make five **classes**. A class is a group of examples with the same label. Rename the starting classes with the pencil icon and click **Add a class** until you have `circle`, `square`, `cross`, `triangle` and `VUOTO`. Use `VUOTO` for plain paper. The app treats that label as a rest.
+3. For each shape, draw a few versions on white paper. Click **Webcam** on its class card and allow camera access if your browser asks. Point the camera at one drawing at a time, then use **Hold to Record**. You can also select **Upload** to add photos. Try about 30–50 examples per class, with small changes in size, angle and light. Keep each shape about the size it will be on your sheet. For `VUOTO`, show a blank area of the same paper.
+4. Click **Train Model**. When it finishes, use **Preview** to try drawings you did not include in training. Check which label gets the longest bar. Try blank paper too. If two shapes get mixed up, add more examples of those shapes and train again.
 
-## Dal foglio al loop
+![Teachable Machine class card with a square in the webcam and the Hold to Record button](docs/readme/teachable-machine-examples.png)
 
-1. Scegli uno dei due fogli e stampalo in A4 orizzontale a dimensione effettiva (100%). Disegna un solo simbolo per casella, dentro il bordo. Lascia in bianco le pause.
-2. Seleziona la webcam. Premi **Importa modello** e scegli lo ZIP scaricato da Teachable Machine con **Image Project → Export Model → TensorFlow.js → Download**. Puoi iniziare con il [modello incluso](assets/modelli%20teachable%20machine/tm-my-image-model.zip), che riconosce cerchio, quadrato, croce e triangolo.
-3. Per ogni etichetta scegli un WAV oppure **Nessun suono**. Il campione selezionato si sente subito. Sono inclusi otto campioni acustici ed elettronici. Per usare i tuoi file scegli **Cartella WAV**. Usa campioni WAV mono o stereo.
-4. Inquadra un solo foglio e tutti e quattro i suoi marcatori, in buona luce, poi premi **Acquisisci**. L'app indica il formato rilevato e sovrappone alla foto i bordi riconosciuti e i nomi dei campioni. Premi **Torna alla webcam** per rivedere l'anteprima.
-5. Premi **Start**. La colonna corrente si illumina nel blocco che sta suonando. **Stop** interrompe il loop.
+![Teachable Machine after training, with a circle in the preview and the strongest bar on cerchio](docs/readme/teachable-machine-preview.png)
 
-La soglia iniziale è 85%. Puoi regolarla e vedere subito il risultato sulla stessa foto. Per addestrare un nuovo modello raccogli esempi delle singole caselle, con disegni, illuminazione e sfondo simili a quelli d'uso. Aggiungi una classe `VUOTO` con esempi senza disegni. L'app lascia in silenzio quella classe e filtra anche le caselle chiaramente bianche.
+The screenshots use the Italian menus. **Carica** means Upload, **Tieni premuto per registrare** means Hold to Record, **Addestra modello** means Train Model, and **Anteprima** means Preview.
 
-Le scelte sono salvate in `%LocalAppData%\VisualMusicBlockLooper\scena.json`, con una copia della versione precedente in `scena.json.bak` dopo il primo aggiornamento. Le associazioni sono salvate per modello. Il percorso iniziale dei campioni è `assets/suoni` nella cartella dell'eseguibile. Le foto restano in memoria durante la sessione.
+## 3. Export the model as a ZIP
 
-[Crediti dei WAV](assets/suoni/CREDITI.md). Gli avvisi di TensorFlow.js e Teachable Machine si trovano in `Inference/Vendor/NOTICE.md` nella distribuzione.
+1. In **Preview**, click **Export Model** (**Esporta modello**).
+2. Choose **TensorFlow.js**, select **Download** (**Scarica**), then click **Download my model** (**Scarica il mio modello**).
+3. Leave the downloaded `.zip` file zipped. Find it in **Downloads** so you can select it from the app. If you also want to keep working on your training examples later, save your Teachable Machine project (`.tm`) separately.
 
-## Build, distribuzione e test
+![Teachable Machine export dialog with TensorFlow.js and Download selected](docs/readme/teachable-machine-export.png)
 
-Apri `VisualMusicBlockLooper.sln` in Visual Studio con il carico di lavoro **Sviluppo desktop .NET**, oppure usa il .NET SDK su Windows. Il pacchetto NuGet delle reference assemblies compila per `net47` anche se sul PC è installata una versione successiva di .NET Framework.
+## 4. Build the Windows app
+
+If you have the source code, **building** turns it into an app you can run. Ask your teacher to help install the tools on a school PC.
+
+**In Visual Studio**
+
+1. Install **Visual Studio Community** and select the **.NET desktop development** workload in Visual Studio Installer. [Visual Studio Community](https://visualstudio.microsoft.com/vs/community/) · [How to add a workload](https://learn.microsoft.com/en-us/visualstudio/install/modify-visual-studio)
+2. Open `VisualMusicBlockLooper.sln` from the extracted source folder. In **Solution Explorer**, right-click the `VisualMusicBlockLooper` app project and choose **Set as Startup Project**.
+3. Press **Ctrl+F5** to build and open the app. The first build may need internet access to download packages.
+
+**In PowerShell**
+
+Install a supported Windows x64 .NET SDK. In File Explorer, open the extracted folder that contains `VisualMusicBlockLooper.sln`. Click the address bar, type `powershell`, and press **Enter**. Run the first command. When you see **Build succeeded**, run the second line to open the app. [Download the .NET SDK](https://dotnet.microsoft.com/en-us/download) · [Microsoft's dotnet build guide](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-build)
 
 ```powershell
-dotnet build -c Debug
-dotnet build -c Release
+dotnet build .\VisualMusicBlockLooper.sln -c Release
+& ".\src\VisualMusicBlockLooper\bin\Release\net47\VisualMusicBlockLooper.exe"
+```
+
+The app targets .NET Framework 4.7. To run it, the PC needs a compatible .NET Framework runtime, WebView2 Runtime and Visual C++ Redistributable x64. On a school PC, ask your teacher if Windows says a component is missing. [Framework versions](https://learn.microsoft.com/en-us/dotnet/framework/install/versions-and-dependencies) · [WebView2](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) · [Visual C++ Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist)
+
+## 5. Match shapes to drum sounds
+
+1. Open `VisualMusicBlockLooper.exe` from the app folder if Visual Studio did not open it. The app starts in full screen. Press **Esc** if you want to resize it.
+2. Pick your camera in **Webcam**. If you still have a live camera preview in Teachable Machine, turn it off or close that tab to free the camera.
+3. Click **Importa modello** (Import model) and choose the ZIP from Step 3. If you want to try the app before training, look for `tm-my-image-model.zip` or `tm-my-image-model 0.zip` in [the models folder](assets/modelli%20teachable%20machine).
+4. Pick one sound from each label’s menu. You’ll hear a short preview as soon as you choose a WAV. Set `VUOTO` to **Nessun suono** (No sound). Try this starter kit.
+
+   | Shape | Class label | WAV to choose |
+   | --- | --- | --- |
+   | △ Triangle | `triangle` or `triangolo` | `kick-01.wav` |
+   | ○ Circle | `circle` or `cerchio` | `snare-01.wav` |
+   | □ Square | `square` or `quadrato` | `hihat-closed.wav` |
+   | × Cross | `cross` or `croce` | `crash-01.wav` |
+
+The drums come with the app. To try your own mono or stereo WAVs, pick their folder with **Cartella WAV** (WAV folder). [Sound credits](assets/suoni/CREDITI.md)
+
+## 6. Draw your first groove
+
+Print [Sheet 1](assets/foglio-loop-a4.pdf) in **A4 landscape at 100%**. Leave the four black corner markers clear so the app can find the sheet. Draw at most one symbol per box, near the centre. The dot in this table means leave that box blank.
+
+| Row | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 · Kick | △ | · | · | · | △ | · | · | · |
+| 2 · Snare | · | ○ | · | ○ | · | ○ | · | ○ |
+| 3 · Hi-hat | □ | □ | □ | □ | □ | □ | □ | □ |
+| 4 · Crash | × | · | · | · | · | · | · | · |
+
+Read the columns from left to right. Shapes in the same column play together. The sound follows the shape wherever you draw it.
+
+**Try Sheet 2 next.** Print it in **A4 landscape at 100%** too. Copy all four rows of each column from Sheet 1. Put columns 1–4 at steps **1, 5, 9 and 13** in the top block and columns 5–8 at steps **17, 21, 25 and 29** in the bottom block. Leave the other steps blank for the first listen, then try adding a sound in between. Sheet 2 plays steps 1–16 across the top and 17–32 across the bottom. Each box there is one quarter as long as a box on Sheet 1, so both sheets take four seconds for one round at 120 BPM.
+
+## 7. Play it and change something
+
+1. Set **BPM** (beats per minute) to **120**. Place the sheet in good light and aim the webcam so all four markers are visible.
+2. Click **Acquisisci** (Capture). The preview freezes. Look for the recognized boxes and their sound names. **Soglia %** sets how sure the app must be to use a prediction. Start at **85%**.
+3. Click **Start** and watch the highlighted column move as you listen. Press **Stop** to edit the groove. Move one shape to a different box or give a shape a different WAV. If you changed the drawing, take another photo and listen for what changed.
+
+To take another photo, click **Torna alla webcam** (Back to the camera), check the framing, and click **Acquisisci**. If the app missed a symbol, try brighter light or a darker outline.
+
+![Visual Music Block Looper with four sound menus, a filled Sheet 2 in the webcam, and the Capture button](docs/readme/groove-sheet-in-the-app.png)
+
+**If it stays silent**, check the Windows volume, pick a WAV for at least one recognized shape, and make sure **Acquisisci** has detected the sheet with all four markers.
+
+<details>
+<summary>For teachers and developers</summary>
+
+The app stores settings in `%LocalAppData%\VisualMusicBlockLooper\scena.json` and keeps the previous copy in `scena.json.bak` after an update. Assignments are saved per model. The default WAV folder is `assets/suoni` next to the executable. Captured photos stay in memory for the session.
+
+Run these commands from the source folder to test or publish a distributable folder.
+
+```powershell
 dotnet test -c Release
 dotnet publish src/VisualMusicBlockLooper -c Release -o artifacts/VisualMusicBlockLooper
 ```
 
-I test coprono il modello incluso in WebView2, la griglia ruotata e in prospettiva, il ripristino della scena e il mixer. I test con categoria `Hardware` usano l'uscita audio predefinita e una webcam USB, se presente. I test con categoria `WebView2` richiedono il runtime e una sessione desktop.
+The `Hardware` tests use the default audio output and a USB webcam if available. The `WebView2` tests require that runtime and a desktop session. The app uses local files for recognition and playback. For an offline classroom, install the runtimes in advance. The TensorFlow.js notices ship in `Inference/Vendor/NOTICE.md`.
 
-Quando cambia un layout, rigenera il relativo SVG dalla cartella principale del repository, poi esegui lo script PDF con Python e ReportLab.
+To regenerate the print sheets after a layout change, build Release and run these commands. The PDF script uses Python with ReportLab.
 
 ```powershell
 $app = 'src/VisualMusicBlockLooper/bin/Release/net47/VisualMusicBlockLooper.exe'
@@ -51,3 +119,5 @@ python scripts/export-grid-pdf.py
 Start-Process -FilePath $app -ArgumentList '--export-grid-32 assets/foglio-loop-32-passi-a4.svg' -WindowStyle Hidden -Wait
 python scripts/export-grid-pdf.py assets/foglio-loop-32-passi-a4.svg
 ```
+
+</details>

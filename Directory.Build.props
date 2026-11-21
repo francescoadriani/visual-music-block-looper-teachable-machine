@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <DemoModelPath>$(MSBuildThisFileDirectory)assets/modelli teachable machine/tm-my-image-model.zip</DemoModelPath>
+    <DemoModelPath Condition="!Exists('$(DemoModelPath)')">$(MSBuildThisFileDirectory)assets/modelli teachable machine/tm-my-image-model 0.zip</DemoModelPath>
+  </PropertyGroup>
+</Project>

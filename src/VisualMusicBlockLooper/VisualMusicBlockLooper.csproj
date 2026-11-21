@@ -27,8 +27,10 @@
     <None Include="../../assets/foglio-loop-a4.pdf" Link="assets/foglio-loop-a4.pdf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../assets/foglio-loop-32-passi-a4.svg" Link="assets/foglio-loop-32-passi-a4.svg" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../assets/foglio-loop-32-passi-a4.pdf" Link="assets/foglio-loop-32-passi-a4.pdf" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="../../assets/modelli teachable machine/tm-my-image-model.zip"
+    <None Include="$(DemoModelPath)"
           Link="assets/modelli teachable machine/tm-my-image-model.zip" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../README.md" Link="README.md" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../README-it.md" Link="README-it.md" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../docs/readme/*.png" Link="docs/readme/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

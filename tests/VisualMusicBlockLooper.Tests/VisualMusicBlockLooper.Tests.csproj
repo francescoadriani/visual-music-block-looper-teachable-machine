@@ -18,7 +18,7 @@
   <ItemGroup>
     <Reference Include="System.IO.Compression" />
     <Reference Include="System.IO.Compression.FileSystem" />
-    <None Include="../../assets/modelli teachable machine/tm-my-image-model.zip"
+    <None Include="$(DemoModelPath)"
           Link="model-fixture.zip" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
